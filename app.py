@@ -114,7 +114,7 @@ total_properties = 1000
 bookings = 520
 move_ins = 248
 
-available_property = (
+available_inventory = (
     total_properties - bookings
 )
 
