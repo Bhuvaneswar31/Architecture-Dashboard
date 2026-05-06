@@ -130,62 +130,21 @@ with colB:
         markers=True
     )
     st.plotly_chart(fig_trend, use_container_width=True)
-# Profit MAP Visualization
-with colF:
-    st.subheader("Geographic Profit Distribution")
 
-    # Profit aggregation by city
-    profit_city = filtered.groupby("City")["Profit (₹)"].sum().reset_index()
+# -----------------------
+# PROJECT ANALYSIS
+# -----------------------
+colC, colD = st.columns(2)
 
-    # Latitude & Longitude coordinates
-    city_coords = {
-        "Chennai": {"lat": 13.0827, "lon": 80.2707},
-        "Bangalore": {"lat": 12.9716, "lon": 77.5946},
-        "Coimbatore": {"lat": 11.0168, "lon": 76.9558},
-        "Hyderabad": {"lat": 17.3850, "lon": 78.4867},
-        "Mumbai": {"lat": 19.0760, "lon": 72.8777}
-    }
+with colC:
+    st.subheader("Projects by City")
+    fig_city = px.bar(filtered, x="City", color="Type")
+    st.plotly_chart(fig_city, use_container_width=True)
 
-    # Map coordinates to dataframe
-    profit_city["lat"] = profit_city["City"].map(lambda x: city_coords[x]["lat"])
-    profit_city["lon"] = profit_city["City"].map(lambda x: city_coords[x]["lon"])
-
-    # Create map visualization
-    fig_map = px.scatter_geo(
-        profit_city,
-        lat="lat",
-        lon="lon",
-        size="Profit (₹)",
-        color="Profit (₹)",
-        hover_name="City",
-        hover_data={
-            "Profit (₹)": ":,.0f",
-            "lat": False,
-            "lon": False
-        },
-        projection="natural earth",
-        size_max=40
-    )
-
-    # Customize map appearance
-    fig_map.update_geos(
-        visible=False,
-        showcountries=True,
-        countrycolor="white",
-        lataxis_range=[6, 25],
-        lonaxis_range=[68, 90],
-        bgcolor="rgba(0,0,0,0)"
-    )
-
-    fig_map.update_layout(
-        height=500,
-        margin={"r":0,"t":40,"l":0,"b":0},
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="white")
-    )
-
-    st.plotly_chart(fig_map, use_container_width=True)
+with colD:
+    st.subheader("Project Status")
+    fig_status = px.pie(filtered, names="Status", hole=0.4)
+    st.plotly_chart(fig_status, use_container_width=True)
 
 # -----------------------
 # FINANCIAL ANALYSIS
