@@ -15,6 +15,7 @@ st.set_page_config(
 # -----------------------
 st.markdown("""
 <style>
+
 .stApp {
     background-image: url("https://images.unsplash.com/photo-1600585154340-be6161a56a0c");
     background-size: cover;
@@ -42,6 +43,7 @@ h1, h2, h3, h4 {
 [data-testid="stSidebar"] {
     background-color: rgba(17,24,39,0.95);
 }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -106,35 +108,22 @@ filtered = data[
 ]
 
 # -----------------------
-# CORE KPI CALCULATIONS
+# REAL ESTATE KPI VALUES
 # -----------------------
-total_projects = filtered["Project_ID"].nunique()
-
-active_projects = filtered[
-    filtered["Status"] == "Ongoing"
-]["Project_ID"].count()
-
-completed_projects = filtered[
-    filtered["Status"] == "Completed"
-]["Project_ID"].count()
-
-# -----------------------
-# REALISTIC REAL ESTATE KPIs
-# -----------------------
-
-# Practical business values
 total_properties = 1000
 bookings = 520
 move_ins = 248
 
-# Funnel values
+available_inventory = (
+    total_properties - bookings
+)
+
+# Funnel Metrics
 visitors = 12500
 enquiries = 1810
 site_visits = 805
 
-# -----------------------
-# FINANCIAL METRICS
-# -----------------------
+# Financial Metrics
 total_revenue = filtered["Revenue (₹)"].sum()
 total_profit = filtered["Profit (₹)"].sum()
 
@@ -196,28 +185,28 @@ col1.metric(
 )
 
 col2.metric(
-    "Active Projects",
-    active_projects
+    "Available Inventory",
+    f"{available_inventory:,}"
 )
 
 col3.metric(
-    "Completed Projects",
-    completed_projects
-)
-
-col4.metric(
     "Bookings",
     f"{bookings:,}"
 )
 
-col5.metric(
+col4.metric(
     "Successful Move-ins",
     f"{move_ins:,}"
 )
 
-col6.metric(
+col5.metric(
     "Revenue",
     f"₹{total_revenue:,.0f}"
+)
+
+col6.metric(
+    "Occupancy Rate",
+    f"{occupancy_rate:.2%}"
 )
 
 # -----------------------
@@ -251,8 +240,8 @@ col11.metric(
 )
 
 col12.metric(
-    "Occupancy Rate",
-    f"{occupancy_rate:.2%}"
+    "ROI",
+    f"{roi:.2%}"
 )
 
 # -----------------------
@@ -262,7 +251,9 @@ colA, colB = st.columns(2)
 
 with colA:
 
-    st.subheader("Real Estate Conversion Funnel")
+    st.subheader(
+        "Real Estate Conversion Funnel"
+    )
 
     funnel_data = pd.DataFrame({
         "Stage": [
@@ -300,7 +291,9 @@ with colA:
 
 with colB:
 
-    st.subheader("Monthly Customer Trends")
+    st.subheader(
+        "Monthly Customer Trends"
+    )
 
     trend_data = pd.DataFrame({
         "Month": [
@@ -342,7 +335,9 @@ colC, colD = st.columns(2)
 
 with colC:
 
-    st.subheader("Projects by City")
+    st.subheader(
+        "Projects by City"
+    )
 
     fig_city = px.bar(
         filtered,
@@ -363,7 +358,9 @@ with colC:
 
 with colD:
 
-    st.subheader("Project Status Distribution")
+    st.subheader(
+        "Project Status Distribution"
+    )
 
     fig_status = px.pie(
         filtered,
@@ -388,7 +385,9 @@ colE, colF = st.columns(2)
 
 with colE:
 
-    st.subheader("Revenue by Project")
+    st.subheader(
+        "Revenue by Project"
+    )
 
     fig_rev = px.bar(
         filtered,
@@ -410,25 +409,46 @@ with colE:
 
 with colF:
 
-    st.subheader("Geographic Profit Distribution")
+    st.subheader(
+        "Geographic Profit Distribution"
+    )
 
     profit_city = filtered.groupby(
         "City"
     )["Profit (₹)"].sum().reset_index()
 
     city_coords = {
-        "Chennai": {"lat": 13.0827, "lon": 80.2707},
-        "Bangalore": {"lat": 12.9716, "lon": 77.5946},
-        "Coimbatore": {"lat": 11.0168, "lon": 76.9558},
-        "Hyderabad": {"lat": 17.3850, "lon": 78.4867},
-        "Mumbai": {"lat": 19.0760, "lon": 72.8777}
+        "Chennai": {
+            "lat": 13.0827,
+            "lon": 80.2707
+        },
+        "Bangalore": {
+            "lat": 12.9716,
+            "lon": 77.5946
+        },
+        "Coimbatore": {
+            "lat": 11.0168,
+            "lon": 76.9558
+        },
+        "Hyderabad": {
+            "lat": 17.3850,
+            "lon": 78.4867
+        },
+        "Mumbai": {
+            "lat": 19.0760,
+            "lon": 72.8777
+        }
     }
 
-    profit_city["lat"] = profit_city["City"].map(
+    profit_city["lat"] = profit_city[
+        "City"
+    ].map(
         lambda x: city_coords[x]["lat"]
     )
 
-    profit_city["lon"] = profit_city["City"].map(
+    profit_city["lon"] = profit_city[
+        "City"
+    ].map(
         lambda x: city_coords[x]["lon"]
     )
 
@@ -459,7 +479,12 @@ with colF:
 
     fig_map.update_layout(
         height=500,
-        margin={"r":0,"t":40,"l":0,"b":0},
+        margin={
+            "r":0,
+            "t":40,
+            "l":0,
+            "b":0
+        },
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="white")
@@ -475,9 +500,10 @@ with colF:
 # -----------------------
 st.subheader("Key Insights")
 
-# Revenue leader
 top_city = (
-    filtered.groupby("City")["Revenue (₹)"]
+    filtered.groupby("City")[
+        "Revenue (₹)"
+    ]
     .sum()
     .idxmax()
     if not filtered.empty
@@ -485,14 +511,16 @@ top_city = (
 )
 
 top_city_revenue = (
-    filtered.groupby("City")["Revenue (₹)"]
+    filtered.groupby("City")[
+        "Revenue (₹)"
+    ]
     .sum()
     .max()
     if not filtered.empty
     else 0
 )
 
-# Funnel drop analysis
+# Funnel Drop Analysis
 drop1 = enquiries - site_visits
 drop2 = site_visits - bookings
 drop3 = bookings - move_ins
@@ -508,16 +536,17 @@ biggest_drop = max(
     key=drop_dict.get
 )
 
-# Best project type
+# Best Performing Type
 best_type = (
-    filtered.groupby("Type")["Profit (₹)"]
+    filtered.groupby("Type")[
+        "Profit (₹)"
+    ]
     .sum()
     .idxmax()
     if not filtered.empty
     else "N/A"
 )
 
-# Completion rate
 avg_completion = (
     filtered["Completion_%"].mean()
     if not filtered.empty
@@ -528,8 +557,9 @@ avg_completion = (
 # INSIGHTS TEXT
 # -----------------------
 insights_text = f"""
-- Total available properties currently stand at **{total_properties:,}** units across all selected projects.
-- Current booking volume is **{bookings:,}**, with **{move_ins:,} successful move-ins** completed.
+- Total available properties currently stand at **{total_properties:,}** units.
+- Current available inventory is **{available_inventory:,}** properties.
+- Total bookings currently stand at **{bookings:,}**, with **{move_ins:,} successful move-ins** completed.
 - Overall visitor-to-move-in conversion rate stands at **{overall_conversion:.2%}**.
 - Highest revenue contribution is generated from **{top_city} (₹{top_city_revenue:,.0f})**.
 - Major customer drop is identified during the **{biggest_drop}** stage.
