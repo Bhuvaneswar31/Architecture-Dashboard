@@ -28,7 +28,7 @@ st.markdown("""
 # -----------------------
 # LOAD DATA
 # -----------------------
-file = "Architecture_Dashboard_Data.xlsx"
+file = "Updated_Architecture_Dashboard_Data.xlsx"
 
 projects = pd.read_excel(file, sheet_name="Projects_Data")
 funnel = pd.read_excel(file, sheet_name="Funnel_Data")
@@ -41,9 +41,23 @@ data = projects.merge(revenue, on="Project_ID")
 # -----------------------
 st.sidebar.title("Filters")
 
-city = st.sidebar.multiselect("City", data["City"].unique(), default=data["City"].unique())
-ptype = st.sidebar.multiselect("Project Type", data["Type"].unique(), default=data["Type"].unique())
-status = st.sidebar.multiselect("Status", data["Status"].unique(), default=data["Status"].unique())
+city = st.sidebar.multiselect(
+    "City",
+    data["City"].unique(),
+    default=data["City"].unique()
+)
+
+ptype = st.sidebar.multiselect(
+    "Project Type",
+    data["Type"].unique(),
+    default=data["Type"].unique()
+)
+
+status = st.sidebar.multiselect(
+    "Status",
+    data["Status"].unique(),
+    default=data["Status"].unique()
+)
 
 filtered = data[
     (data["City"].isin(city)) &
@@ -55,31 +69,58 @@ filtered = data[
 # KPI CALCULATIONS
 # -----------------------
 total_projects = filtered["Project_ID"].nunique()
-completed = filtered[filtered["Status"]=="Completed"]["Project_ID"].count()
-active = filtered[filtered["Status"]=="Ongoing"]["Project_ID"].count()
+
+completed = filtered[
+    filtered["Status"] == "Completed"
+]["Project_ID"].count()
+
+active = filtered[
+    filtered["Status"] == "Ongoing"
+]["Project_ID"].count()
 
 total_revenue = filtered["Revenue (₹)"].sum()
 total_profit = filtered["Profit (₹)"].sum()
 
+# -----------------------
+# REAL ESTATE FUNNEL METRICS
+# -----------------------
 visitors = funnel["Visitors"].sum()
 enquiries = funnel["Enquiries"].sum()
 visits = funnel["Site_Visits"].sum()
-clients = funnel["Clients"].sum()
+bookings = funnel["Bookings"].sum()
+move_ins = funnel["Move_Ins"].sum()
 
 # -----------------------
-# ADVANCED KPI CALCULATIONS (NEW ADDED)
+# ADVANCED KPI CALCULATIONS
 # -----------------------
-overall_conversion = clients / visitors if visitors else 0
+overall_conversion = move_ins / visitors if visitors else 0
+
 lead_conversion = enquiries / visitors if visitors else 0
+
 visit_conversion = visits / enquiries if enquiries else 0
-client_conversion = clients / visits if visits else 0
-roi = total_profit / filtered["Cost (₹)"].sum() if filtered["Cost (₹)"].sum() else 0
+
+booking_conversion = bookings / visits if visits else 0
+
+movein_conversion = move_ins / bookings if bookings else 0
+
+roi = (
+    total_profit / filtered["Cost (₹)"].sum()
+    if filtered["Cost (₹)"].sum()
+    else 0
+)
 
 # -----------------------
 # TITLE
 # -----------------------
-st.markdown("<h1 style='text-align:center;'>ARCHITECTURE PERFORMANCE ANALYTICS DASHBOARD</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align:center;'>Data Visualization & Business Insights</h4>", unsafe_allow_html=True)
+st.markdown(
+    "<h1 style='text-align:center;'>ARCHITECTURE PERFORMANCE ANALYTICS DASHBOARD</h1>",
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    "<h4 style='text-align:center;'>Data Visualization & Business Insights</h4>",
+    unsafe_allow_html=True
+)
 
 # -----------------------
 # KPI SECTION
@@ -87,22 +128,51 @@ st.markdown("<h4 style='text-align:center;'>Data Visualization & Business Insigh
 col1, col2, col3, col4, col5, col6 = st.columns(6)
 
 col1.metric("Projects", total_projects)
-col2.metric("Active", active)
-col3.metric("Completed", completed)
-col4.metric("Clients", clients)
-col5.metric("Revenue", f"₹{total_revenue:,.0f}")
-col6.metric("Profit", f"₹{total_profit:,.0f}")
+
+col2.metric("Active Projects", active)
+
+col3.metric("Completed Projects", completed)
+
+col4.metric("Bookings", bookings)
+
+col5.metric("Successful Move-ins", move_ins)
+
+col6.metric("Revenue", f"₹{total_revenue:,.0f}")
 
 # -----------------------
-# ADVANCED KPIs (UPDATED AS REQUESTED)
+# SECOND KPI ROW
 # -----------------------
-col7, col8, col9, col10, col11 = st.columns(5)
+col7, col8, col9, col10, col11, col12 = st.columns(6)
 
-col7.metric("Overall Conversion", f"{overall_conversion:.2%}")
-col8.metric("Lead Conversion", f"{lead_conversion:.2%}")
-col9.metric("Visit Conversion", f"{visit_conversion:.2%}")
-col10.metric("Client Conversion", f"{client_conversion:.2%}")
-col11.metric("ROI", f"{roi:.2%}")
+col7.metric(
+    "Overall Conversion",
+    f"{overall_conversion:.2%}"
+)
+
+col8.metric(
+    "Lead Conversion",
+    f"{lead_conversion:.2%}"
+)
+
+col9.metric(
+    "Visit Conversion",
+    f"{visit_conversion:.2%}"
+)
+
+col10.metric(
+    "Booking Conversion",
+    f"{booking_conversion:.2%}"
+)
+
+col11.metric(
+    "Move-in Conversion",
+    f"{movein_conversion:.2%}"
+)
+
+col12.metric(
+    "ROI",
+    f"{roi:.2%}"
+)
 
 # -----------------------
 # FUNNEL + TREND
@@ -110,26 +180,52 @@ col11.metric("ROI", f"{roi:.2%}")
 colA, colB = st.columns(2)
 
 with colA:
-    st.subheader("Conversion Funnel")
+
+    st.subheader("Real Estate Conversion Funnel")
 
     funnel_data = pd.DataFrame({
-        "Stage": ["Visitors", "Enquiries", "Site Visits", "Clients"],
-        "Count": [visitors, enquiries, visits, clients]
+        "Stage": [
+            "Visitors",
+            "Enquiries",
+            "Site Visits",
+            "Bookings",
+            "Move-ins"
+        ],
+        "Count": [
+            visitors,
+            enquiries,
+            visits,
+            bookings,
+            move_ins
+        ]
     })
 
-    fig_funnel = px.funnel(funnel_data, x="Count", y="Stage")
-    st.plotly_chart(fig_funnel, use_container_width=True)
+    fig_funnel = px.funnel(
+        funnel_data,
+        x="Count",
+        y="Stage"
+    )
+
+    st.plotly_chart(
+        fig_funnel,
+        use_container_width=True
+    )
 
 with colB:
-    st.subheader("Monthly Trends")
+
+    st.subheader("Monthly Customer Trends")
 
     fig_trend = px.line(
         funnel,
         x="Month",
-        y=["Visitors", "Clients"],
+        y=["Visitors", "Move_Ins"],
         markers=True
     )
-    st.plotly_chart(fig_trend, use_container_width=True)
+
+    st.plotly_chart(
+        fig_trend,
+        use_container_width=True
+    )
 
 # -----------------------
 # PROJECT ANALYSIS
@@ -137,14 +233,34 @@ with colB:
 colC, colD = st.columns(2)
 
 with colC:
+
     st.subheader("Projects by City")
-    fig_city = px.bar(filtered, x="City", color="Type")
-    st.plotly_chart(fig_city, use_container_width=True)
+
+    fig_city = px.bar(
+        filtered,
+        x="City",
+        color="Type"
+    )
+
+    st.plotly_chart(
+        fig_city,
+        use_container_width=True
+    )
 
 with colD:
+
     st.subheader("Project Status")
-    fig_status = px.pie(filtered, names="Status", hole=0.4)
-    st.plotly_chart(fig_status, use_container_width=True)
+
+    fig_status = px.pie(
+        filtered,
+        names="Status",
+        hole=0.4
+    )
+
+    st.plotly_chart(
+        fig_status,
+        use_container_width=True
+    )
 
 # -----------------------
 # FINANCIAL ANALYSIS
@@ -152,48 +268,145 @@ with colD:
 colE, colF = st.columns(2)
 
 with colE:
+
     st.subheader("Revenue by Project")
-    fig_rev = px.bar(filtered, x="Project_Name", y="Revenue (₹)")
-    st.plotly_chart(fig_rev, use_container_width=True)
+
+    fig_rev = px.bar(
+        filtered,
+        x="Project_Name",
+        y="Revenue (₹)"
+    )
+
+    st.plotly_chart(
+        fig_rev,
+        use_container_width=True
+    )
 
 with colF:
-    st.subheader("Profit by City")
-    profit_city = filtered.groupby("City")["Profit (₹)"].sum().reset_index()
-    fig_profit = px.bar(profit_city, x="City", y="Profit (₹)")
-    st.plotly_chart(fig_profit, use_container_width=True)
+
+    st.subheader("Geographic Profit Distribution")
+
+    profit_city = filtered.groupby(
+        "City"
+    )["Profit (₹)"].sum().reset_index()
+
+    city_coords = {
+        "Chennai": {"lat": 13.0827, "lon": 80.2707},
+        "Bangalore": {"lat": 12.9716, "lon": 77.5946},
+        "Coimbatore": {"lat": 11.0168, "lon": 76.9558},
+        "Hyderabad": {"lat": 17.3850, "lon": 78.4867},
+        "Mumbai": {"lat": 19.0760, "lon": 72.8777}
+    }
+
+    profit_city["lat"] = profit_city["City"].map(
+        lambda x: city_coords[x]["lat"]
+    )
+
+    profit_city["lon"] = profit_city["City"].map(
+        lambda x: city_coords[x]["lon"]
+    )
+
+    fig_map = px.scatter_geo(
+        profit_city,
+        lat="lat",
+        lon="lon",
+        size="Profit (₹)",
+        color="Profit (₹)",
+        hover_name="City",
+        hover_data={
+            "Profit (₹)": ":,.0f",
+            "lat": False,
+            "lon": False
+        },
+        projection="natural earth",
+        size_max=40
+    )
+
+    fig_map.update_geos(
+        visible=False,
+        showcountries=True,
+        countrycolor="white",
+        lataxis_range=[6, 25],
+        lonaxis_range=[68, 90],
+        bgcolor="rgba(0,0,0,0)"
+    )
+
+    fig_map.update_layout(
+        height=500,
+        margin={"r":0,"t":40,"l":0,"b":0},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="white")
+    )
+
+    st.plotly_chart(
+        fig_map,
+        use_container_width=True
+    )
 
 # -----------------------
-# DYNAMIC INSIGHTS (UPDATED)
+# DYNAMIC INSIGHTS
 # -----------------------
 st.subheader("Key Insights")
 
-# Safe calculations
-top_city = filtered.groupby("City")["Revenue (₹)"].sum().idxmax() if not filtered.empty else "N/A"
-top_city_revenue = filtered.groupby("City")["Revenue (₹)"].sum().max() if not filtered.empty else 0
+# Highest revenue city
+top_city = (
+    filtered.groupby("City")["Revenue (₹)"]
+    .sum()
+    .idxmax()
+    if not filtered.empty
+    else "N/A"
+)
 
-# Conversion drop analysis
+top_city_revenue = (
+    filtered.groupby("City")["Revenue (₹)"]
+    .sum()
+    .max()
+    if not filtered.empty
+    else 0
+)
+
+# Biggest funnel drop
 drop1 = enquiries - visits
-drop2 = visits - clients
+drop2 = visits - bookings
+drop3 = bookings - move_ins
 
-if drop1 > drop2:
-    biggest_drop = "Enquiries → Site Visits"
-else:
-    biggest_drop = "Site Visits → Clients"
+drop_dict = {
+    "Enquiries → Site Visits": drop1,
+    "Site Visits → Bookings": drop2,
+    "Bookings → Move-ins": drop3
+}
 
-# Best performing project type
-best_type = filtered.groupby("Type")["Profit (₹)"].sum().idxmax() if not filtered.empty else "N/A"
+biggest_drop = max(
+    drop_dict,
+    key=drop_dict.get
+)
 
-# Completion insight
-avg_completion = filtered["Completion_%"].mean() if not filtered.empty else 0
+# Best project type
+best_type = (
+    filtered.groupby("Type")["Profit (₹)"]
+    .sum()
+    .idxmax()
+    if not filtered.empty
+    else "N/A"
+)
 
-# Build dynamic insights text
+# Completion %
+avg_completion = (
+    filtered["Completion_%"].mean()
+    if not filtered.empty
+    else 0
+)
+
+# Insights text
 insights_text = f"""
-- Overall conversion rate is **{overall_conversion:.2%}**, based on current filtered data.
+- Overall customer-to-move-in conversion rate is **{overall_conversion:.2%}** based on the selected filters.
 - Highest revenue is generated from **{top_city} (₹{top_city_revenue:,.0f})**.
-- Major drop observed in **{biggest_drop} stage**, indicating process inefficiency.
-- **{best_type} projects** are generating the highest profit.
-- Average project completion stands at **{avg_completion:.1f}%**.
-- ROI is currently **{roi:.2%}**, reflecting financial performance.
+- Major customer drop is observed during the **{biggest_drop}** stage.
+- **{best_type} projects** are contributing the highest profitability.
+- Average project completion rate stands at **{avg_completion:.1f}%**.
+- Total successful move-ins currently stand at **{move_ins:,}**.
+- ROI is currently **{roi:.2%}**, indicating the overall financial performance.
 """
 
 st.success(insights_text)
