@@ -5,7 +5,10 @@ import plotly.express as px
 # -----------------------
 # PAGE CONFIG
 # -----------------------
-st.set_page_config(page_title="Architecture Dashboard", layout="wide")
+st.set_page_config(
+    page_title="Architecture Dashboard",
+    layout="wide"
+)
 
 # -----------------------
 # BACKGROUND IMAGE
@@ -17,11 +20,29 @@ st.markdown("""
     background-size: cover;
     background-attachment: fixed;
 }
+
 .block-container {
-    background-color: rgba(0,0,0,0.75);
+    background-color: rgba(0,0,0,0.78);
     padding: 20px;
-    border-radius: 10px;
+    border-radius: 12px;
 }
+
+h1, h2, h3, h4 {
+    color: white;
+}
+
+[data-testid="stMetricValue"] {
+    color: white;
+}
+
+[data-testid="stMetricLabel"] {
+    color: #d1d5db;
+}
+
+[data-testid="stSidebar"] {
+    background-color: rgba(17,24,39,0.95);
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -30,11 +51,28 @@ st.markdown("""
 # -----------------------
 file = "Updated_Architecture_Dashboard_Data.xlsx"
 
-projects = pd.read_excel(file, sheet_name="Projects_Data")
-funnel = pd.read_excel(file, sheet_name="Funnel_Data")
-revenue = pd.read_excel(file, sheet_name="Revenue_Data")
+projects = pd.read_excel(
+    file,
+    sheet_name="Projects_Data"
+)
 
-data = projects.merge(revenue, on="Project_ID")
+funnel = pd.read_excel(
+    file,
+    sheet_name="Funnel_Data"
+)
+
+revenue = pd.read_excel(
+    file,
+    sheet_name="Revenue_Data"
+)
+
+# -----------------------
+# MERGE DATA
+# -----------------------
+data = projects.merge(
+    revenue,
+    on="Project_ID"
+)
 
 # -----------------------
 # SIDEBAR FILTERS
@@ -59,6 +97,9 @@ status = st.sidebar.multiselect(
     default=data["Status"].unique()
 )
 
+# -----------------------
+# FILTER DATA
+# -----------------------
 filtered = data[
     (data["City"].isin(city)) &
     (data["Type"].isin(ptype)) &
@@ -70,77 +111,119 @@ filtered = data[
 # -----------------------
 total_projects = filtered["Project_ID"].nunique()
 
-completed = filtered[
+# Real Estate Logic
+# Assuming each project contains approx 40 properties
+total_properties = total_projects * 40
+
+completed_projects = filtered[
     filtered["Status"] == "Completed"
 ]["Project_ID"].count()
 
-active = filtered[
+active_projects = filtered[
     filtered["Status"] == "Ongoing"
 ]["Project_ID"].count()
 
+# Financial KPIs
 total_revenue = filtered["Revenue (₹)"].sum()
 total_profit = filtered["Profit (₹)"].sum()
 
-# -----------------------
-# REAL ESTATE FUNNEL METRICS
-# -----------------------
+# Funnel Metrics
 visitors = funnel["Visitors"].sum()
 enquiries = funnel["Enquiries"].sum()
-visits = funnel["Site_Visits"].sum()
+site_visits = funnel["Site_Visits"].sum()
 bookings = funnel["Bookings"].sum()
 move_ins = funnel["Move_Ins"].sum()
 
 # -----------------------
 # ADVANCED KPI CALCULATIONS
 # -----------------------
-overall_conversion = move_ins / visitors if visitors else 0
+overall_conversion = (
+    move_ins / visitors
+    if visitors else 0
+)
 
-lead_conversion = enquiries / visitors if visitors else 0
+lead_conversion = (
+    enquiries / visitors
+    if visitors else 0
+)
 
-visit_conversion = visits / enquiries if enquiries else 0
+visit_conversion = (
+    site_visits / enquiries
+    if enquiries else 0
+)
 
-booking_conversion = bookings / visits if visits else 0
+booking_conversion = (
+    bookings / site_visits
+    if site_visits else 0
+)
 
-movein_conversion = move_ins / bookings if bookings else 0
+movein_conversion = (
+    move_ins / bookings
+    if bookings else 0
+)
+
+occupancy_rate = (
+    move_ins / total_properties
+    if total_properties else 0
+)
 
 roi = (
     total_profit / filtered["Cost (₹)"].sum()
-    if filtered["Cost (₹)"].sum()
-    else 0
+    if filtered["Cost (₹)"].sum() else 0
 )
 
 # -----------------------
-# TITLE
+# DASHBOARD TITLE
 # -----------------------
-st.markdown(
-    "<h1 style='text-align:center;'>ARCHITECTURE PERFORMANCE ANALYTICS DASHBOARD</h1>",
-    unsafe_allow_html=True
-)
+st.markdown("""
+<h1 style='text-align:center;'>
+ARCHITECTURE PERFORMANCE ANALYTICS DASHBOARD
+</h1>
+""", unsafe_allow_html=True)
 
-st.markdown(
-    "<h4 style='text-align:center;'>Data Visualization & Business Insights</h4>",
-    unsafe_allow_html=True
-)
+st.markdown("""
+<h4 style='text-align:center; color:#d1d5db;'>
+Real Estate Conversion & Occupancy Analytics
+</h4>
+""", unsafe_allow_html=True)
 
 # -----------------------
 # KPI SECTION
 # -----------------------
 col1, col2, col3, col4, col5, col6 = st.columns(6)
 
-col1.metric("Projects", total_projects)
+col1.metric(
+    "Properties Available",
+    f"{total_properties:,}"
+)
 
-col2.metric("Active Projects", active)
+col2.metric(
+    "Active Projects",
+    active_projects
+)
 
-col3.metric("Completed Projects", completed)
+col3.metric(
+    "Completed Projects",
+    completed_projects
+)
 
-col4.metric("Bookings", bookings)
+col4.metric(
+    "Bookings",
+    f"{bookings:,}"
+)
 
-col5.metric("Successful Move-ins", move_ins)
+col5.metric(
+    "Successful Move-ins",
+    f"{move_ins:,}"
+)
 
-col6.metric("Revenue", f"₹{total_revenue:,.0f}")
+col6.metric(
+    "Revenue",
+    f"₹{total_revenue:,.0f}"
+)
 
 # -----------------------
-# SECOND KPI ROW
+# ADVANCED KPIs
 # -----------------------
 col7, col8, col9, col10, col11, col12 = st.columns(6)
 
@@ -170,8 +253,8 @@ col11.metric(
 )
 
 col12.metric(
-    "ROI",
-    f"{roi:.2%}"
+    "Occupancy Rate",
+    f"{occupancy_rate:.2%}"
 )
 
 # -----------------------
@@ -194,7 +277,7 @@ with colA:
         "Count": [
             visitors,
             enquiries,
-            visits,
+            site_visits,
             bookings,
             move_ins
         ]
@@ -204,6 +287,12 @@ with colA:
         funnel_data,
         x="Count",
         y="Stage"
+    )
+
+    fig_funnel.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="white")
     )
 
     st.plotly_chart(
@@ -220,6 +309,12 @@ with colB:
         x="Month",
         y=["Visitors", "Move_Ins"],
         markers=True
+    )
+
+    fig_trend.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="white")
     )
 
     st.plotly_chart(
@@ -242,6 +337,12 @@ with colC:
         color="Type"
     )
 
+    fig_city.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="white")
+    )
+
     st.plotly_chart(
         fig_city,
         use_container_width=True
@@ -249,12 +350,17 @@ with colC:
 
 with colD:
 
-    st.subheader("Project Status")
+    st.subheader("Project Status Distribution")
 
     fig_status = px.pie(
         filtered,
         names="Status",
-        hole=0.4
+        hole=0.45
+    )
+
+    fig_status.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="white")
     )
 
     st.plotly_chart(
@@ -274,7 +380,14 @@ with colE:
     fig_rev = px.bar(
         filtered,
         x="Project_Name",
-        y="Revenue (₹)"
+        y="Revenue (₹)",
+        color="Revenue (₹)"
+    )
+
+    fig_rev.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="white")
     )
 
     st.plotly_chart(
@@ -290,6 +403,7 @@ with colF:
         "City"
     )["Profit (₹)"].sum().reset_index()
 
+    # Coordinates
     city_coords = {
         "Chennai": {"lat": 13.0827, "lon": 80.2707},
         "Bangalore": {"lat": 12.9716, "lon": 77.5946},
@@ -366,9 +480,9 @@ top_city_revenue = (
     else 0
 )
 
-# Biggest funnel drop
-drop1 = enquiries - visits
-drop2 = visits - bookings
+# Funnel drop analysis
+drop1 = enquiries - site_visits
+drop2 = site_visits - bookings
 drop3 = bookings - move_ins
 
 drop_dict = {
@@ -382,7 +496,7 @@ biggest_drop = max(
     key=drop_dict.get
 )
 
-# Best project type
+# Best performing type
 best_type = (
     filtered.groupby("Type")["Profit (₹)"]
     .sum()
@@ -398,15 +512,16 @@ avg_completion = (
     else 0
 )
 
-# Insights text
+# Dynamic insights
 insights_text = f"""
-- Overall customer-to-move-in conversion rate is **{overall_conversion:.2%}** based on the selected filters.
+- Total available properties currently stand at **{total_properties:,}** units across all selected projects.
+- Overall visitor-to-move-in conversion rate is **{overall_conversion:.2%}**.
 - Highest revenue is generated from **{top_city} (₹{top_city_revenue:,.0f})**.
 - Major customer drop is observed during the **{biggest_drop}** stage.
 - **{best_type} projects** are contributing the highest profitability.
 - Average project completion rate stands at **{avg_completion:.1f}%**.
-- Total successful move-ins currently stand at **{move_ins:,}**.
-- ROI is currently **{roi:.2%}**, indicating the overall financial performance.
+- Current occupancy rate is **{occupancy_rate:.2%}**, based on successful move-ins.
+- Total successful move-ins currently stand at **{move_ins:,}** properties.
 """
 
 st.success(insights_text)
