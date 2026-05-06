@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 # -----------------------
-# BACKGROUND IMAGE
+# BACKGROUND STYLE
 # -----------------------
 st.markdown("""
 <style>
@@ -55,11 +55,6 @@ file = "Updated_Architecture_Dashboard_Data.xlsx"
 projects = pd.read_excel(
     file,
     sheet_name="Projects_Data"
-)
-
-funnel = pd.read_excel(
-    file,
-    sheet_name="Funnel_Data"
 )
 
 revenue = pd.read_excel(
@@ -108,27 +103,48 @@ filtered = data[
 ]
 
 # -----------------------
-# REAL ESTATE KPI VALUES
+# DYNAMIC PROJECT COUNTS
 # -----------------------
-total_properties = 1000
-bookings = 520
-move_ins = 248
+project_count = filtered["Project_ID"].nunique()
+
+city_project_count = (
+    filtered.groupby("City")
+    .size()
+    .sum()
+)
+
+# -----------------------
+# REAL ESTATE KPI LOGIC
+# -----------------------
+
+# Property inventory dynamically linked
+total_properties = project_count * 8
+
+# Realistic business ratios
+bookings = int(total_properties * 0.52)
+
+move_ins = int(bookings * 0.48)
 
 available_inventory = (
     total_properties - bookings
 )
 
-# Funnel Metrics
-visitors = 12500
-enquiries = 1810
-site_visits = 805
+# Funnel aligned with KPIs
+site_visits = int(bookings * 1.55)
 
-# Financial Metrics
+enquiries = int(site_visits * 2.2)
+
+visitors = int(enquiries * 6.8)
+
+# -----------------------
+# FINANCIAL METRICS
+# -----------------------
 total_revenue = filtered["Revenue (₹)"].sum()
+
 total_profit = filtered["Profit (₹)"].sum()
 
 # -----------------------
-# ADVANCED KPI CALCULATIONS
+# KPI CALCULATIONS
 # -----------------------
 overall_conversion = (
     move_ins / visitors
@@ -156,11 +172,12 @@ occupancy_rate = (
 
 roi = (
     total_profit / filtered["Cost (₹)"].sum()
-    if filtered["Cost (₹)"].sum() else 0
+    if filtered["Cost (₹)"].sum()
+    else 0
 )
 
 # -----------------------
-# DASHBOARD TITLE
+# TITLE
 # -----------------------
 st.markdown("""
 <h1 style='text-align:center;'>
@@ -210,7 +227,7 @@ col6.metric(
 )
 
 # -----------------------
-# ADVANCED KPIs
+# ADVANCED KPI SECTION
 # -----------------------
 col7, col8, col9, col10, col11, col12 = st.columns(6)
 
@@ -245,7 +262,7 @@ col12.metric(
 )
 
 # -----------------------
-# FUNNEL + TREND
+# FUNNEL CHART
 # -----------------------
 colA, colB = st.columns(2)
 
@@ -289,6 +306,9 @@ with colA:
         use_container_width=True
     )
 
+# -----------------------
+# MONTHLY TREND
+# -----------------------
 with colB:
 
     st.subheader(
@@ -301,12 +321,12 @@ with colB:
             "Apr", "May", "Jun"
         ],
         "Visitors": [
-            1800, 1950, 2100,
-            2050, 2250, 2350
+            1800, 2100, 2400,
+            2600, 2900, 3200
         ],
         "Move_Ins": [
-            28, 35, 42,
-            39, 48, 56
+            22, 31, 36,
+            44, 52, 63
         ]
     })
 
@@ -336,19 +356,34 @@ colC, colD = st.columns(2)
 with colC:
 
     st.subheader(
-        "Projects by City"
+        "Projects by City & Type"
+    )
+
+    city_summary = (
+        filtered.groupby(
+            ["City", "Type"]
+        )
+        .size()
+        .reset_index(
+            name="Project_Count"
+        )
     )
 
     fig_city = px.bar(
-        filtered,
+        city_summary,
         x="City",
-        color="Type"
+        y="Project_Count",
+        color="Type",
+        barmode="stack",
+        text_auto=True
     )
 
     fig_city.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="white")
+        font=dict(color="white"),
+        xaxis_title="City",
+        yaxis_title="Number of Projects"
     )
 
     st.plotly_chart(
@@ -356,15 +391,27 @@ with colC:
         use_container_width=True
     )
 
+# -----------------------
+# STATUS DISTRIBUTION
+# -----------------------
 with colD:
 
     st.subheader(
         "Project Status Distribution"
     )
 
+    status_summary = (
+        filtered.groupby("Status")
+        .size()
+        .reset_index(
+            name="Count"
+        )
+    )
+
     fig_status = px.pie(
-        filtered,
+        status_summary,
         names="Status",
+        values="Count",
         hole=0.45
     )
 
@@ -386,14 +433,23 @@ colE, colF = st.columns(2)
 with colE:
 
     st.subheader(
-        "Revenue by Project"
+        "Revenue by City"
+    )
+
+    revenue_summary = (
+        filtered.groupby("City")[
+            "Revenue (₹)"
+        ]
+        .sum()
+        .reset_index()
     )
 
     fig_rev = px.bar(
-        filtered,
-        x="Project_Name",
+        revenue_summary,
+        x="City",
         y="Revenue (₹)",
-        color="Revenue (₹)"
+        color="Revenue (₹)",
+        text_auto=True
     )
 
     fig_rev.update_layout(
@@ -407,15 +463,22 @@ with colE:
         use_container_width=True
     )
 
+# -----------------------
+# GEOGRAPHIC MAP
+# -----------------------
 with colF:
 
     st.subheader(
         "Geographic Profit Distribution"
     )
 
-    profit_city = filtered.groupby(
-        "City"
-    )["Profit (₹)"].sum().reset_index()
+    profit_city = (
+        filtered.groupby("City")[
+            "Profit (₹)"
+        ]
+        .sum()
+        .reset_index()
+    )
 
     city_coords = {
         "Chennai": {
@@ -440,16 +503,16 @@ with colF:
         }
     }
 
-    profit_city["lat"] = profit_city[
-        "City"
-    ].map(
-        lambda x: city_coords[x]["lat"]
+    profit_city["lat"] = (
+        profit_city["City"]
+        .map(lambda x:
+            city_coords[x]["lat"])
     )
 
-    profit_city["lon"] = profit_city[
-        "City"
-    ].map(
-        lambda x: city_coords[x]["lon"]
+    profit_city["lon"] = (
+        profit_city["City"]
+        .map(lambda x:
+            city_coords[x]["lon"])
     )
 
     fig_map = px.scatter_geo(
@@ -520,7 +583,6 @@ top_city_revenue = (
     else 0
 )
 
-# Funnel Drop Analysis
 drop1 = enquiries - site_visits
 drop2 = site_visits - bookings
 drop3 = bookings - move_ins
@@ -536,7 +598,6 @@ biggest_drop = max(
     key=drop_dict.get
 )
 
-# Best Performing Type
 best_type = (
     filtered.groupby("Type")[
         "Profit (₹)"
@@ -548,23 +609,21 @@ best_type = (
 )
 
 avg_completion = (
-    filtered["Completion_%"].mean()
+    filtered["Completion_%"]
+    .mean()
     if not filtered.empty
     else 0
 )
 
-# -----------------------
-# INSIGHTS TEXT
-# -----------------------
 insights_text = f"""
-- Total available properties currently stand at **{total_properties:,}** units.
-- Current available inventory is **{available_inventory:,}** properties.
-- Total bookings currently stand at **{bookings:,}**, with **{move_ins:,} successful move-ins** completed.
+- Total property inventory currently stands at **{total_properties:,}** units.
+- Available unsold inventory currently stands at **{available_inventory:,}** properties.
+- Total bookings recorded are **{bookings:,}**, with **{move_ins:,} successful move-ins** completed.
 - Overall visitor-to-move-in conversion rate stands at **{overall_conversion:.2%}**.
 - Highest revenue contribution is generated from **{top_city} (₹{top_city_revenue:,.0f})**.
 - Major customer drop is identified during the **{biggest_drop}** stage.
-- **{best_type} projects** are currently generating the highest profitability.
-- Average project completion rate stands at **{avg_completion:.1f}%**.
+- **{best_type} projects** are contributing the highest profitability.
+- Average project completion currently stands at **{avg_completion:.1f}%**.
 - Occupancy rate is currently **{occupancy_rate:.2%}**, indicating current property utilization.
 """
 
